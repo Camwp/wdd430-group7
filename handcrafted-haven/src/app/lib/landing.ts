@@ -1,13 +1,35 @@
-// src/lib/landing.ts
+// src/app/lib/landing.ts
 import { unstable_noStore as noStore } from 'next/cache';
 import { sql } from '@/app/lib/db';
 
-// Top shops with “craft” inferred from their most common product category.
-// Falls back to 'Maker' when no category found.
+// ----- Types for query rows -----
+type ArtisanRow = {
+  shop_id: string;
+  display_name: string;
+  avatar_url: string | null;
+  craft: string | null;
+};
+
+type CategoryRow = {
+  id: string;
+  slug: string;
+  name: string;
+};
+
+type FeaturedRow = {
+  id: string;
+  title: string;
+  price_cents: number;
+  rating_avg: string | number | null; // numeric comes back as string
+  rating_count: number | null;
+  cover: string | null;
+};
+
+// Top shops with a best-guess "craft" from their dominant category
 export async function getTopArtisans(limit = 4) {
-    noStore();
-    // pick shops that actually have products, newest first
-    const rows = await sql/*sql*/`
+  noStore();
+
+  const rows = await sql<ArtisanRow[]>/*sql*/`
     WITH shop_stats AS (
       SELECT s.id AS shop_id,
              s.display_name,
@@ -19,7 +41,7 @@ export async function getTopArtisans(limit = 4) {
     ),
     craft_guess AS (
       SELECT p.shop_id,
-             c.name AS craft_name,
+             c.name AS craft,
              ROW_NUMBER() OVER (
                PARTITION BY p.shop_id
                ORDER BY COUNT(*) DESC, MIN(p.created_at) DESC
@@ -33,31 +55,39 @@ export async function getTopArtisans(limit = 4) {
     SELECT st.shop_id,
            st.display_name,
            COALESCE(st.avatar_url, '') AS avatar_url,
-           COALESCE(cg.craft_name, 'Maker') AS craft
+           COALESCE(cg.craft, 'Maker') AS craft
     FROM shop_stats st
     LEFT JOIN craft_guess cg
       ON cg.shop_id = st.shop_id AND cg.rn = 1
     ORDER BY st.product_count DESC, st.shop_id
     LIMIT ${limit};
   `;
-    return rows as Array<{ shop_id: string; display_name: string; avatar_url: string; craft: string }>;
+
+  return rows.map(r => ({
+    shop_id: r.shop_id,
+    display_name: r.display_name,
+    avatar_url: r.avatar_url ?? '',
+    craft: r.craft ?? 'Maker',
+  }));
 }
 
 export async function getTopCategories(limit = 12) {
-    noStore();
-    const rows = await sql/*sql*/`
+  noStore();
+
+  const rows = await sql<CategoryRow[]>/*sql*/`
     SELECT id, slug, name
     FROM categories
     ORDER BY name ASC
     LIMIT ${limit}
   `;
-    return rows as Array<{ id: string; slug: string; name: string }>;
+
+  return rows;
 }
 
-// Featured products = newest active products with cover image + rating
 export async function getFeaturedProducts(limit = 6) {
-    noStore();
-    const rows = await sql/*sql*/`
+  noStore();
+
+  const rows = await sql<FeaturedRow[]>/*sql*/`
     SELECT p.id,
            p.title,
            p.price_cents,
@@ -75,12 +105,13 @@ export async function getFeaturedProducts(limit = 6) {
     ORDER BY p.created_at DESC, p.id DESC
     LIMIT ${limit}
   `;
-    return rows as Array<{
-        id: string;
-        title: string;
-        price_cents: number;
-        rating_avg: number | string;   // postgres numeric can come as string
-        rating_count: number;
-        cover: string;
-    }>;
+
+  return rows.map(p => ({
+    id: p.id,
+    title: p.title,
+    price_cents: p.price_cents,
+    rating_avg: typeof p.rating_avg === 'string' ? parseFloat(p.rating_avg) : (p.rating_avg ?? 0),
+    rating_count: p.rating_count ?? 0,
+    cover: p.cover ?? '',
+  }));
 }

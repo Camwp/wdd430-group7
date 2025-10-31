@@ -1,4 +1,4 @@
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { sql } from '@/app/lib/db';
 import { users, shops, categories, products, productImages, productCats, reviews } from '@/app/lib/placeholder-data';
 

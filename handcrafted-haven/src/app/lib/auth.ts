@@ -2,12 +2,13 @@ import { getServerSession } from "next-auth";
 import type { DefaultSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
-export interface UserSession extends DefaultSession["user"] {
+// Use a type alias (intersection), not interface extends
+export type UserSession = (DefaultSession["user"] & {
     id?: string;
     role?: string;
-}
+}) | undefined;
 
 export async function getCurrentUser() {
     const session = await getServerSession(authOptions);
-    return session?.user as UserSession | undefined;
+    return session?.user as UserSession;
 }

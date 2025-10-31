@@ -1,9 +1,13 @@
-import NextAuth from "next-auth";
+import NextAuth, { type NextAuthOptions, type Session } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import type { JWT } from "next-auth/jwt";
+import bcrypt from "bcryptjs";
 import { sql } from "@/app/lib/db";
-import bcrypt from "bcrypt";
 
-export const authOptions = {
+export const authOptions: NextAuthOptions = {
+    secret: process.env.NEXTAUTH_SECRET,
+    session: { strategy: "jwt" },
+    pages: { signIn: "/auth/sign-in" },
     providers: [
         CredentialsProvider({
             name: "Credentials",
@@ -20,26 +24,32 @@ export const authOptions = {
           WHERE email = ${credentials.email}
           LIMIT 1
         `;
-
                 if (!user) return null;
-                const valid = await bcrypt.compare(credentials.password, user.password);
-                if (!valid) return null;
 
-                return { id: user.id, name: user.name, email: user.email, role: user.role };
+                const ok = await bcrypt.compare(credentials.password, user.password);
+                if (!ok) return null;
+
+                return { id: user.id, name: user.name, email: user.email, role: user.role } as any;
             },
         }),
     ],
-    session: { strategy: "jwt" },
-    pages: {
-        signIn: "/auth/sign-in",
-    },
     callbacks: {
-        async jwt({ token, user }) {
-            if (user) token.user = user;
+        async jwt(
+            { token, user }: { token: JWT; user?: { id: string; name?: string | null; email?: string | null; role?: string } }
+        ): Promise<JWT> {
+            if (user) {
+                // attach minimal user info to the token
+                (token as any).user = { id: user.id, name: user.name, email: user.email, role: user.role };
+            }
             return token;
         },
-        async session({ session, token }) {
-            if (token?.user) session.user = token.user;
+        async session(
+            { session, token }: { session: Session; token: JWT }
+        ): Promise<Session> {
+            const tUser = (token as any).user;
+            if (tUser) {
+                (session as any).user = tUser;
+            }
             return session;
         },
     },
