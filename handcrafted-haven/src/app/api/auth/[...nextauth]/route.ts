@@ -1,0 +1,49 @@
+import NextAuth from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
+import { sql } from "@/app/lib/db";
+import bcrypt from "bcrypt";
+
+export const authOptions = {
+    providers: [
+        CredentialsProvider({
+            name: "Credentials",
+            credentials: {
+                email: { label: "Email", type: "text" },
+                password: { label: "Password", type: "password" },
+            },
+            async authorize(credentials) {
+                if (!credentials?.email || !credentials.password) return null;
+
+                const [user] = await sql/*sql*/`
+          SELECT id, name, email, password, role
+          FROM users
+          WHERE email = ${credentials.email}
+          LIMIT 1
+        `;
+
+                if (!user) return null;
+                const valid = await bcrypt.compare(credentials.password, user.password);
+                if (!valid) return null;
+
+                return { id: user.id, name: user.name, email: user.email, role: user.role };
+            },
+        }),
+    ],
+    session: { strategy: "jwt" },
+    pages: {
+        signIn: "/auth/sign-in",
+    },
+    callbacks: {
+        async jwt({ token, user }) {
+            if (user) token.user = user;
+            return token;
+        },
+        async session({ session, token }) {
+            if (token?.user) session.user = token.user;
+            return session;
+        },
+    },
+};
+
+const handler = NextAuth(authOptions);
+export { handler as GET, handler as POST };

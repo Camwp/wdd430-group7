@@ -1,13 +1,19 @@
-// src/components/landing/FeaturedProducts.tsx
-import ProductCard from "@/components/product/ProductCard";
+import { getFeaturedProducts } from '@/app/lib/landing';
+import ProductCard from '@/components/product/ProductCard';
 
-const MOCK = [
-    { id: "mug-1", title: "Hand-Thrown Stoneware Mug", priceCents: 3200, image: "/mug.jpg", rating: 4.8, reviews: 112 },
-    { id: "ring-1", title: "Sterling Silver Stacking Ring", priceCents: 2400, image: "/ring.jpg", rating: 4.7, reviews: 89 },
-    { id: "blanket-1", title: "Woven Wool Throw Blanket", priceCents: 9800, image: "/blanket.jpg", rating: 4.9, reviews: 54 },
-];
+export default async function FeaturedProducts() {
+    const rows = await getFeaturedProducts(3);
 
-export default function FeaturedProducts() {
+    // Adapter to your ProductCard props
+    const items = rows.map((p) => ({
+        id: p.id,
+        title: p.title,
+        priceCents: p.price_cents,
+        image: p.cover || '/placeholder-product.jpg',
+        rating: typeof p.rating_avg === 'string' ? parseFloat(p.rating_avg) : (p.rating_avg ?? 0),
+        reviews: p.rating_count ?? 0,
+    }));
+
     return (
         <section aria-labelledby="featured-products" className="mt-10">
             <div className="mb-3 flex items-end justify-between">
@@ -16,7 +22,7 @@ export default function FeaturedProducts() {
             </div>
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {MOCK.map((p) => (
+                {items.map((p) => (
                     <ProductCard key={p.id} {...p} />
                 ))}
             </div>
