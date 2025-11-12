@@ -21,12 +21,12 @@ export default async function Navbar() {
             <ul className="flex items-center gap-6">
                 <li>
                     <Link className="hover:underline" href="/catalog">
-                        Catalog
+                        All Products
                     </Link>
                 </li>
                 <li>
                     <Link className="hover:underline" href="/sellers">
-                        Sellers
+                        Shops
                     </Link>
                 </li>
 
