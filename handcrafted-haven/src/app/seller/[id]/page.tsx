@@ -70,11 +70,11 @@ export default async function SellerPage({ params, searchParams }: Params) {
 
       {/* banner */}
       {shop.banner_url && (
-        <div className="w-full h-48 rounded-xl overflow-hidden">
+        <div className="w-full aspect-[1472/192] rounded-xl overflow-hidden">
           <img
             src={shop.banner_url}
             alt={`${shop.display_name} banner`}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover object-center"
           />
         </div>
       )}

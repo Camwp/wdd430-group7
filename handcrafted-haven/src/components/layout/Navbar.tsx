@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
@@ -14,8 +15,15 @@ export default async function Navbar() {
             aria-label="Primary"
             className="container mx-auto flex items-center justify-between p-4"
         >
-            <Link href="/" className="text-lg font-semibold">
-                Handcrafted Haven
+            <Link href="/" className="flex items-center gap-2">
+            <Image
+                src="/logo.jpg"
+                alt="Handcrafted Haven logo"
+                width={200}
+                height={80}
+                className="h-25 w-auto"
+                priority
+            />
             </Link>
 
             <ul className="flex items-center gap-6">
