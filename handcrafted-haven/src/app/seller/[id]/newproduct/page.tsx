@@ -1,130 +1,153 @@
 import { redirect } from "next/navigation";
-import { createProduct } from "@/app/lib/seller";
+import { revalidatePath } from "next/cache";
+import { getCurrentUser } from "@/app/lib/auth";
+import { getSellerProfile, createProduct } from "@/app/lib/seller";
+
+export const runtime = "nodejs";
 
 export default async function NewProductPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  const { id: shopId } = await params;
 
   async function createProductAction(formData: FormData) {
     "use server";
 
-    const shopId = formData.get("shopId");
+    const rawShopId = formData.get("shopId");
+
+    if (typeof rawShopId !== "string" || !rawShopId) {
+      throw new Error("Missing shopId in form");
+    }
+    const shopId = rawShopId;
+
     const title = formData.get("title");
     const description = formData.get("description");
     const price = formData.get("price");
-    const stock = formData.get("stock");
-
-    if (typeof shopId !== "string" || !shopId) {
-      throw new Error("shopId is required");
-    }
+    const imageUrl = formData.get("imageUrl");
 
     if (typeof title !== "string" || !title.trim()) {
-      throw new Error("Title is required");
+      redirect(`/seller/${shopId}/newproduct?msg=Title+is+required`);
     }
 
-    const priceCents =
-      typeof price === "string" && price.trim()
-        ? Math.round(parseFloat(price) * 100)
-        : null;
+    const currentUser = await getCurrentUser();
+    if (!currentUser?.id) {
+      redirect(`/seller/${shopId}?msg=Not+authorized`);
+    }
 
-    const stockNumber =
-      typeof stock === "string" && stock.trim()
-        ? parseInt(stock, 10)
-        : 0;
+    const data = await getSellerProfile(shopId);
+    if (!data || data.shop.seller_id !== currentUser.id) {
+      redirect(`/seller/${shopId}?msg=Not+authorized`);
+    }
+
+    let priceCents: number | null = null;
+    if (typeof price === "string" && price.trim() !== "") {
+      const numeric = Number(price);
+      if (!Number.isNaN(numeric) && numeric >= 0) {
+        priceCents = Math.round(numeric * 100);
+      }
+    }
 
     await createProduct({
       shopId,
       title: title.trim(),
       description:
-        typeof description === "string" ? description.trim() : null,
+        typeof description === "string" && description.trim() !== ""
+          ? description.trim()
+          : null,
       priceCents,
+      imageUrl:
+        typeof imageUrl === "string" && imageUrl.trim() !== ""
+          ? imageUrl.trim()
+          : null,
     });
 
-    redirect(`/seller/${shopId}`);
+    revalidatePath(`/seller/${shopId}`);
+    redirect(`/seller/${shopId}?msg=Listing+created`);
   }
 
   return (
-    <div className="mx-auto max-w-xl p-6 space-y-4">
-      <h1 className="text-2xl font-semibold mb-4">Add Product</h1>
+    <main className="container mx-auto px-4 py-8 max-w-xl">
+      <h1 className="text-2xl font-semibold mb-4">Add a new product</h1>
 
-      <form action={createProductAction} className="space-y-4">
-        <input type="hidden" name="shopId" value={id} />
+      <form
+        action={createProductAction}
+        className="space-y-4 rounded-lg border bg-white p-6 shadow-sm"
+      >
+        <input type="hidden" name="shopId" value={shopId} />
 
-        <div>
+        <div className="space-y-1">
           <label
-            className="block text-sm font-medium mb-1"
             htmlFor="title"
+            className="text-sm font-medium text-neutral-700"
           >
             Title
           </label>
           <input
             id="title"
             name="title"
-            className="w-full rounded border p-2"
+            type="text"
+            className="w-full rounded-md border px-3 py-2 text-sm"
             required
           />
         </div>
 
-        <div>
+        <div className="space-y-1">
           <label
-            className="block text-sm font-medium mb-1"
             htmlFor="description"
+            className="text-sm font-medium text-neutral-700"
           >
             Description
           </label>
           <textarea
             id="description"
             name="description"
-            className="w-full rounded border p-2"
+            className="w-full rounded-md border px-3 py-2 text-sm"
+            rows={4}
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label
-              className="block text-sm font-medium mb-1"
-              htmlFor="price"
-            >
-              Price (e.g. 12.50)
-            </label>
-            <input
-              id="price"
-              name="price"
-              type="number"
-              step="0.01"
-              min="0"
-              className="w-full rounded border p-2"
-            />
-          </div>
+        <div className="space-y-1">
+          <label
+            htmlFor="price"
+            className="text-sm font-medium text-neutral-700"
+          >
+            Price (USD)
+          </label>
+          <input
+            id="price"
+            name="price"
+            type="number"
+            step="0.01"
+            min="0"
+            className="w-full rounded-md border px-3 py-2 text-sm"
+          />
+        </div>
 
-          <div>
-            <label
-              className="block text-sm font-medium mb-1"
-              htmlFor="stock"
-            >
-              Stock
-            </label>
-            <input
-              id="stock"
-              name="stock"
-              type="number"
-              min="0"
-              defaultValue={1}
-              className="w-full rounded border p-2"
-            />
-          </div>
+        <div className="space-y-1">
+          <label
+            htmlFor="imageUrl"
+            className="text-sm font-medium text-neutral-700"
+          >
+            Image URL
+          </label>
+          <input
+            id="imageUrl"
+            name="imageUrl"
+            type="url"
+            placeholder="https://example.com/my-product.jpg"
+            className="w-full rounded-md border px-3 py-2 text-sm"
+          />
         </div>
 
         <button
           type="submit"
-          className="rounded-lg border px-4 py-2 font-medium"
+          className="inline-flex items-center rounded-md border border-neutral-800 px-4 py-2 text-sm font-medium hover:bg-neutral-900 hover:text-white"
         >
-          Create Product
+          Create product
         </button>
       </form>
-    </div>
+    </main>
   );
 }
