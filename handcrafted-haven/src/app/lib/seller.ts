@@ -1,5 +1,6 @@
 import { unstable_noStore as noStore } from "next/cache";
 import { sql } from "@/app/lib/db";
+// import { createSlug } from "@/app/lib/actions";
 
 export type ShopRow = {
   id: string;
@@ -105,10 +106,10 @@ export async function createProduct(input: {
   title: string;
   description?: string | null;
   priceCents?: number | null;
+  imageUrl?: string | null;
 }) {
-
-  // insert a new row into products and return the created product
-  const [row] = await sql`
+  // insert prod
+  const [product] = await sql<SellerProductRow[]>`
     INSERT INTO products (
       shop_id,
       title,
@@ -124,10 +125,10 @@ export async function createProduct(input: {
       ${input.title},
       ${input.description ?? null},
       ${input.priceCents ?? null},
-      1,           -- default stock for new listing
+      1,           -- default stock
       'active',    -- default status
-      0.0,         -- rating_avg (no reviews yet)
-      0           -- rating_count
+      0.0,         -- rating_avg
+      0            -- rating_count
     )
     RETURNING
       id,
@@ -143,8 +144,16 @@ export async function createProduct(input: {
       updated_at
   `;
 
-  return row;
+  if (input.imageUrl && input.imageUrl.trim() !== "") {
+    await sql`
+      INSERT INTO product_images (product_id, url, sort_order)
+      VALUES (${product.id}, ${input.imageUrl.trim()}, 0)
+    `;
+  }
+
+  return product;
 }
+
 
 export async function updateProduct(input: {
   id: string;

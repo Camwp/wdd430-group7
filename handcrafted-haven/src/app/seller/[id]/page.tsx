@@ -13,7 +13,7 @@ type Params = {
 };
 
 // delete a product
-async function deleteProductAction(formData: FormData) {
+export async function deleteProductAction(formData: FormData) {
   "use server";
 
   const shopId = formData.get("shopId");
@@ -70,11 +70,11 @@ export default async function SellerPage({ params, searchParams }: Params) {
 
       {/* banner */}
       {shop.banner_url && (
-        <div className="w-full h-48 rounded-xl overflow-hidden">
+        <div className="w-full aspect-[1472/192] rounded-xl overflow-hidden">
           <img
             src={shop.banner_url}
             alt={`${shop.display_name} banner`}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover object-center"
           />
         </div>
       )}
@@ -131,7 +131,7 @@ export default async function SellerPage({ params, searchParams }: Params) {
             return (
               <article
                 key={product.id}
-                className="border rounded-lg p-4 flex flex-col"
+                className="border rounded-lg p-4 flex flex-col h-full"
               >
                 {primaryImage && (
                   <img
@@ -141,35 +141,39 @@ export default async function SellerPage({ params, searchParams }: Params) {
                   />
                 )}
 
-                <h3 className="font-semibold">{product.title}</h3>
+                {/* content area */}
+                <div className="flex-1 flex flex-col">
+                  <h3 className="font-semibold">{product.title}</h3>
 
-                {product.price_cents != null && (
-                  <p className="text-sm mt-1">
-                    {(product.price_cents / 100).toLocaleString(undefined, {
-                      style: "currency",
-                      currency: "USD",
-                    })}
-                  </p>
-                )}
+                  {product.price_cents != null && (
+                    <p className="text-sm mt-1">
+                      {(product.price_cents / 100).toLocaleString(undefined, {
+                        style: "currency",
+                        currency: "USD",
+                      })}
+                    </p>
+                  )}
 
-                {product.description && (
-                  <p className="mt-2 text-sm text-neutral-700 line-clamp-4">
-                    {product.description}
-                  </p>
-                )}
+                  {product.description && (
+                    <p className="mt-2 text-sm text-neutral-700 line-clamp-4">
+                      {product.description}
+                    </p>
+                  )}
+                </div>
 
+                {/* actions pinned at bottom */}
                 {isOwner && (
-                  <div className="mt-3 flex gap-2">
+                  <div className="mt-4 flex gap-2">
                     <Link
                       href={`/seller/${id}/${product.id}/edit`}
-                      className="text-sm font-medium text-blue-600 hover:underline"
+                      className="inline-flex items-center justify-center rounded-md border border-emerald-500 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
                     >
                       Edit
                     </Link>
 
                     <DeleteProductButton
-                      productId={product.id}
                       shopId={id}
+                      productId={product.id}
                       action={deleteProductAction}
                     />
                   </div>
@@ -178,6 +182,7 @@ export default async function SellerPage({ params, searchParams }: Params) {
             );
           })}
         </div>
+
       </section>
     </main>
   );
