@@ -1,6 +1,6 @@
 import { unstable_noStore as noStore } from "next/cache";
 import { sql } from "@/app/lib/db";
-// import { createSlug } from "@/app/lib/actions";
+import { slugify } from "@/app/lib/utils";
 
 export type CategoryRow = {
   id: string;
@@ -14,7 +14,8 @@ export type ShopRow = {
   bio: string | null;
   avatar_url: string | null;
   banner_url: string | null;
-  created_at: string;
+  slug: string;
+  created_at?: string;
 };
 
 export type SellerProductRow = {
@@ -29,6 +30,7 @@ export type SellerProductRow = {
   rating_count: number;
   created_at: string;
   updated_at: string;
+  slug: string;
 };
 
 export type ProductImageRow = {
@@ -51,13 +53,21 @@ export async function getSellerProfile(shopId: string): Promise<SellerProfile | 
     throw new Error("getSellerProfile: shopId is required");
   }
 
-  // 1) Shop row
-  const shops = await sql<ShopRow[]>`
-    SELECT id, seller_id, display_name, bio, avatar_url, banner_url, created_at
-    FROM shops
-    WHERE id = ${shopId}
-    LIMIT 1
-  `;
+// 1) Shop row
+const shops = await sql<ShopRow[]>`
+  SELECT
+    id,
+    seller_id,
+    display_name,
+    bio,
+    avatar_url,
+    banner_url,
+    slug,
+    created_at
+  FROM shops
+  WHERE id = ${shopId}
+  LIMIT 1
+`;
 
   if (!shops.length) return null;
   const shop = shops[0];
@@ -75,7 +85,8 @@ export async function getSellerProfile(shopId: string): Promise<SellerProfile | 
       COALESCE(rating_avg, 0)::numeric AS rating_avg,
       COALESCE(rating_count, 0)       AS rating_count,
       created_at,
-      updated_at
+      updated_at,
+      slug
     FROM products
     WHERE shop_id = ${shopId}
     ORDER BY created_at DESC
@@ -114,6 +125,8 @@ export async function createProduct(input: {
   imageUrl?: string | null;
   categoryName?: string | null;
 }) {
+  const productSlug = slugify(input.title);
+
   // insert prod
   const [product] = await sql<SellerProductRow[]>`
     INSERT INTO products (
@@ -124,7 +137,8 @@ export async function createProduct(input: {
       stock,
       status,
       rating_avg,
-      rating_count
+      rating_count,
+      slug
     )
     VALUES (
       ${input.shopId},
@@ -134,7 +148,8 @@ export async function createProduct(input: {
       1,           -- default stock
       'active',    -- default status
       0.0,         -- rating_avg
-      0            -- rating_count
+      0,           -- rating_count
+      ${productSlug}
     )
     RETURNING
       id,
@@ -147,7 +162,8 @@ export async function createProduct(input: {
       rating_avg,
       rating_count,
       created_at,
-      updated_at
+      updated_at,
+      slug
   `;
 
   if (input.categoryName) {
@@ -187,6 +203,8 @@ export async function updateProduct(input: {
 }) {
   if (!input.id) throw new Error("updateProduct: id is required");
 
+  const newSlug = slugify(input.title);
+
   const [row] = await sql<SellerProductRow[]>`
     UPDATE products
     SET
@@ -194,6 +212,7 @@ export async function updateProduct(input: {
       description = ${input.description ?? null},
       price_cents = ${input.priceCents ?? null},
       stock       = ${input.stock},
+      slug        = ${newSlug},
       updated_at  = NOW()
     WHERE id = ${input.id} AND shop_id = ${input.shopId}
     RETURNING
@@ -211,4 +230,22 @@ export async function updateProduct(input: {
   `;
 
   return row ?? null;
+}
+
+export async function getShopBySlug(slug: string) {
+  const [shop] = await sql<ShopRow[]>/*sql*/`
+    SELECT
+      id,
+      seller_id,
+      display_name,
+      bio,
+      avatar_url,
+      banner_url,
+      slug
+    FROM shops
+    WHERE slug = ${slug}
+    LIMIT 1
+  `;
+
+  return shop ?? null;
 }

@@ -82,3 +82,23 @@ export async function userPurchasedProduct(userId: string, productId: string) {
   `;
     return !!exists;
 }
+
+export async function getProductBySlug(slug: string) {
+  noStore();
+
+  const [product] = await sql/*sql*/`
+    SELECT *
+    FROM products
+    WHERE slug = ${slug}
+    LIMIT 1
+  `;
+
+  return product ?? null;
+}
+
+export async function getProductFullBySlug(slug: string) {
+  const basic = await getProductBySlug(slug);
+  if (!basic) return null;
+
+  return getProductFull(basic.id);
+}

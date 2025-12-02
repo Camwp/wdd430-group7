@@ -78,10 +78,3 @@ export async function addReview(productId: string, authorUserId: string, formDat
   revalidatePath(`/product/${productId}`);
   return { ok: true };
 }
-
-export function createSlug(str: string) {
-  return str
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
