@@ -18,6 +18,7 @@ type CategoryRow = {
 
 type FeaturedRow = {
   id: string;
+  slug: string;
   title: string;
   price_cents: number;
   rating_avg: string | number | null; // numeric comes back as string
@@ -90,6 +91,7 @@ export async function getFeaturedProducts(limit = 6) {
   const rows = await sql<FeaturedRow[]>/*sql*/`
     SELECT p.id,
            p.title,
+           p.slug,
            p.price_cents,
            p.rating_avg,
            p.rating_count,
@@ -109,6 +111,7 @@ export async function getFeaturedProducts(limit = 6) {
   return rows.map(p => ({
     id: p.id,
     title: p.title,
+    slug: p.slug,
     price_cents: p.price_cents,
     rating_avg: typeof p.rating_avg === 'string' ? parseFloat(p.rating_avg) : (p.rating_avg ?? 0),
     rating_count: p.rating_count ?? 0,
