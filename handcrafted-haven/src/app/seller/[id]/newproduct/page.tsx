@@ -16,7 +16,6 @@ export default async function NewProductPage({
     "use server";
 
     const rawShopId = formData.get("shopId");
-
     if (typeof rawShopId !== "string" || !rawShopId) {
       throw new Error("Missing shopId in form");
     }
@@ -26,9 +25,14 @@ export default async function NewProductPage({
     const description = formData.get("description");
     const price = formData.get("price");
     const imageUrl = formData.get("imageUrl");
+    const category = formData.get("category"); // ✅ NEW
 
     if (typeof title !== "string" || !title.trim()) {
       redirect(`/seller/${shopId}/newproduct?msg=Title+is+required`);
+    }
+
+    if (typeof category !== "string" || !category.trim()) {
+      redirect(`/seller/${shopId}/newproduct?msg=Category+is+required`);
     }
 
     const currentUser = await getCurrentUser();
@@ -61,6 +65,7 @@ export default async function NewProductPage({
         typeof imageUrl === "string" && imageUrl.trim() !== ""
           ? imageUrl.trim()
           : null,
+      categoryName: category, // ✅ Pass to createProduct
     });
 
     revalidatePath(`/seller/${shopId}`);
@@ -123,6 +128,30 @@ export default async function NewProductPage({
             min="0"
             className="w-full rounded-md border px-3 py-2 text-sm"
           />
+        </div>
+
+        {/* ✅ Category dropdown */}
+        <div className="space-y-1">
+          <label
+            htmlFor="category"
+            className="text-sm font-medium text-neutral-700"
+          >
+            Category
+          </label>
+          <select
+            id="category"
+            name="category"
+            className="w-full rounded-md border px-3 py-2 text-sm bg-white"
+            required
+          >
+            <option value="">Select a category</option>
+            <option value="Home Decor">Home Decor</option>
+            <option value="Kitchen">Kitchen</option>
+            <option value="Ceramics">Ceramics</option>
+            <option value="Woodwork">Woodwork</option>
+            <option value="Metalwork">Metalwork</option>
+            <option value="Art">Art</option>
+          </select>
         </div>
 
         <div className="space-y-1">

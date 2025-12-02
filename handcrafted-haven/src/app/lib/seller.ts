@@ -2,6 +2,11 @@ import { unstable_noStore as noStore } from "next/cache";
 import { sql } from "@/app/lib/db";
 // import { createSlug } from "@/app/lib/actions";
 
+export type CategoryRow = {
+  id: string;
+  name: string;
+};
+
 export type ShopRow = {
   id: string;
   seller_id: string;
@@ -107,6 +112,7 @@ export async function createProduct(input: {
   description?: string | null;
   priceCents?: number | null;
   imageUrl?: string | null;
+  categoryName?: string | null;
 }) {
   // insert prod
   const [product] = await sql<SellerProductRow[]>`
@@ -143,6 +149,22 @@ export async function createProduct(input: {
       created_at,
       updated_at
   `;
+
+  if (input.categoryName) {
+    const [category] = await sql<CategoryRow[]>`
+      SELECT id, name
+      FROM categories
+      WHERE name = ${input.categoryName}
+      LIMIT 1
+    `;
+
+    if (category) {
+      await sql`
+        INSERT INTO product_categories (product_id, category_id)
+        VALUES (${product.id}, ${category.id})
+      `;
+    }
+  }
 
   if (input.imageUrl && input.imageUrl.trim() !== "") {
     await sql`
