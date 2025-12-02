@@ -7,6 +7,7 @@ export default async function FeaturedProducts() {
     // Adapter to your ProductCard props
     const items = rows.map((p) => ({
         id: p.id,
+        slug: p.slug,
         title: p.title,
         priceCents: p.price_cents,
         image: p.cover || '/placeholder-product.jpg',
