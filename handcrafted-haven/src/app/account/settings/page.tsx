@@ -24,13 +24,28 @@ async function getAccount(userId: string): Promise<AccountRow | null> {
   return rows[0] ?? null;
 }
 
+type ShopRow = {
+  id: string;
+  avatar_url: string | null;
+  banner_url: string | null;
+};
+
+async function getSellerShop(userId: string): Promise<ShopRow | null> {
+  const rows = await sql<ShopRow[]>`
+    SELECT id, avatar_url, banner_url
+    FROM shops
+    WHERE seller_id = ${userId}
+    LIMIT 1
+  `;
+  return rows[0] ?? null;
+}
+
 export default async function AccountSettingsPage({
   searchParams,
 }: {
   searchParams: Promise<{ msg?: string }>;
 }) {
   const session = await getServerSession(authOptions);
-
   const user = session?.user as UserSession | undefined;
 
   if (!user?.id) {
@@ -44,6 +59,9 @@ export default async function AccountSettingsPage({
   if (!account) {
     redirect("/auth/sign-in");
   }
+
+  // ⬅️ NEW: load seller shop if applicable
+  const shop = account.role === "seller" ? await getSellerShop(userId) : null;
 
   async function updateAccountAction(formData: FormData) {
     "use server";
@@ -60,10 +78,33 @@ export default async function AccountSettingsPage({
       redirect("/account/settings?msg=Name+is+required");
     }
 
+    // ✅ Update users.name
     await sql`
       UPDATE users
       SET name = ${name.trim()}
       WHERE id = ${innerUser.id}
+    `;
+
+    // ✅ Also update shop avatar/banner for this user (no-op if they have no shop)
+    const avatarUrl = formData.get("avatar_url");
+    const bannerUrl = formData.get("banner_url");
+
+    const avatarClean =
+      typeof avatarUrl === "string" && avatarUrl.trim() !== ""
+        ? avatarUrl.trim()
+        : null;
+
+    const bannerClean =
+      typeof bannerUrl === "string" && bannerUrl.trim() !== ""
+        ? bannerUrl.trim()
+        : null;
+
+    await sql`
+      UPDATE shops
+      SET
+        avatar_url = ${avatarClean},
+        banner_url = ${bannerClean}
+      WHERE seller_id = ${innerUser.id}
     `;
 
     redirect("/account/settings?msg=Profile+updated");
@@ -138,6 +179,56 @@ export default async function AccountSettingsPage({
             </p>
           </div>
 
+          {/* ⬅️ NEW: seller-only shop fields */}
+          {account.role === "seller" && (
+            <>
+              <hr className="my-4" />
+              <h2 className="text-sm font-semibold text-neutral-800">
+                Storefront appearance
+              </h2>
+
+              <div className="space-y-1">
+                <label
+                  htmlFor="avatar_url"
+                  className="text-sm font-medium text-neutral-700"
+                >
+                  Avatar image URL
+                </label>
+                <input
+                  id="avatar_url"
+                  name="avatar_url"
+                  type="url"
+                  defaultValue={shop?.avatar_url ?? ""}
+                  placeholder="https://example.com/avatar.jpg"
+                  className="w-full rounded-md border px-3 py-2 text-sm"
+                />
+                <p className="text-xs text-neutral-500">
+                  This image appears as your shop avatar.
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <label
+                  htmlFor="banner_url"
+                  className="text-sm font-medium text-neutral-700"
+                >
+                  Banner image URL
+                </label>
+                <input
+                  id="banner_url"
+                  name="banner_url"
+                  type="url"
+                  defaultValue={shop?.banner_url ?? ""}
+                  placeholder="https://example.com/banner.jpg"
+                  className="w-full rounded-md border px-3 py-2 text-sm"
+                />
+                <p className="text-xs text-neutral-500">
+                  This image appears at the top of your shop page.
+                </p>
+              </div>
+            </>
+          )}
+
           <button
             type="submit"
             className="mt-2 inline-flex items-center rounded-md border border-neutral-800 px-4 py-2 text-sm font-medium hover:bg-neutral-900 hover:text-white"
@@ -147,7 +238,8 @@ export default async function AccountSettingsPage({
         </form>
 
         <p className="mt-3 text-xs text-neutral-500">
-          Only account name is able to be changed at this time.
+          You can update your account name, and if you are a seller, your shop
+          avatar and banner images.
         </p>
       </section>
     </main>
