@@ -17,7 +17,9 @@ type ShopRow = {
   id: string;
   seller_id: string;
   display_name: string;
+  slug: string;
 };
+
 
 async function getAccount(userId: string): Promise<AccountRow | null> {
   const rows = await sql<AccountRow[]>`
@@ -32,7 +34,7 @@ async function getAccount(userId: string): Promise<AccountRow | null> {
 
 async function getSellerShop(userId: string): Promise<ShopRow | null> {
   const rows = await sql<ShopRow[]>`
-    SELECT id, seller_id, display_name
+    SELECT id, seller_id, display_name, slug
     FROM shops
     WHERE seller_id = ${userId}
     LIMIT 1
@@ -120,7 +122,7 @@ export default async function AccountPage() {
 
           {account.role === "seller" && shop && (
             <Link
-              href={`/seller/${shop.id}`}
+              href={`/seller/${shop.slug}`}
               className="rounded-md border border-emerald-600 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50"
             >
               Go to storefront

@@ -16,6 +16,7 @@ type SellerRow = {
     banner_url: string | null;
     created_at: string;
     product_count: number;
+    slug: string;
 };
 
 function orderSql(sort?: SellersParams["sort"]) {
@@ -56,22 +57,23 @@ export async function listSellers(params: SellersParams) {
 
     // Rows
     const rows = await sql<SellerRow[]>/*sql*/`
-    SELECT
-      s.id,
-      s.display_name,
-      s.bio,
-      s.avatar_url,
-      s.banner_url,
-      s.created_at,
-      COALESCE((
-        SELECT COUNT(*) FROM products p
-        WHERE p.shop_id = s.id AND p.status = 'active'
-      ), 0)::int AS product_count
-    FROM shops s
-    WHERE ${whereSql}
-    ORDER BY ${orderBy}
-    LIMIT ${pageSize} OFFSET ${offset}
-  `;
+      SELECT
+        s.id,
+        s.display_name,
+        s.bio,
+        s.avatar_url,
+        s.banner_url,
+        s.created_at,
+        COALESCE((
+          SELECT COUNT(*) FROM products p
+          WHERE p.shop_id = s.id AND p.status = 'active'
+        ), 0)::int AS product_count,
+        s.slug
+      FROM shops s
+      WHERE ${whereSql}
+      ORDER BY ${orderBy}
+      LIMIT ${pageSize} OFFSET ${offset}
+    `;
 
     return {
         total: count,

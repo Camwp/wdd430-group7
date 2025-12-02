@@ -65,13 +65,19 @@ export async function listCatalog(params: CatalogParams) {
     `;
 
     const rows = await sql/*sql*/`
-      SELECT p.id, p.title, p.price_cents, p.rating_avg, p.rating_count,
-             COALESCE((
-               SELECT url FROM product_images pi
-               WHERE pi.product_id = p.id
-               ORDER BY sort_order ASC
-               LIMIT 1
-             ), '') AS cover
+      SELECT
+        p.id,
+        p.title,
+        p.price_cents,
+        p.rating_avg,
+        p.rating_count,
+        p.slug,
+        COALESCE((
+          SELECT url FROM product_images pi
+          WHERE pi.product_id = p.id
+          ORDER BY sort_order ASC
+          LIMIT 1
+        ), '') AS cover
       FROM products p
       JOIN product_categories pc ON pc.product_id = p.id
       JOIN categories c ON c.id = pc.category_id
@@ -95,18 +101,25 @@ export async function listCatalog(params: CatalogParams) {
   `;
 
   const rows = await sql/*sql*/`
-    SELECT p.id, p.title, p.price_cents, p.rating_avg, p.rating_count,
-           COALESCE((
-             SELECT url FROM product_images pi
-             WHERE pi.product_id = p.id
-             ORDER BY sort_order ASC
-             LIMIT 1
-           ), '') AS cover
+    SELECT
+      p.id,
+      p.title,
+      p.price_cents,
+      p.rating_avg,
+      p.rating_count,
+      p.slug,
+      COALESCE((
+        SELECT url FROM product_images pi
+        WHERE pi.product_id = p.id
+        ORDER BY sort_order ASC
+        LIMIT 1
+      ), '') AS cover
     FROM products p
     WHERE ${whereSql}
     ORDER BY ${orderBy}
     LIMIT ${pageSize} OFFSET ${offset}
   `;
+
 
   return {
     total: count,
