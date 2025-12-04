@@ -6,24 +6,25 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { sql } from "@/app/lib/db";
 
 // ✅ tell TS this never returns (redirect throws)
-function backTo(productId: string, msg?: string): never {
-    const p = new URLSearchParams();
-    if (msg) p.set("msg", msg);
-    redirect(`/product/${productId}?${p.toString()}`);
+function backTo(slug: string, msg?: string): never {
+  const p = new URLSearchParams();
+  if (msg) p.set("msg", msg);
+  const qs = p.toString();
+  redirect(`/product/${slug}${qs ? `?${qs}` : ""}`);
 }
 
-export async function buyProduct(productId: string) {
+export async function buyProduct(productId: string, slug: string) {
     const session = await getServerSession(authOptions);
     const user = session?.user as { id?: string; role?: string } | undefined;
 
-    if (!user?.id) backTo(productId, "Please sign in.");
+    if (!user?.id) backTo(slug, "Please sign in.");
 
     // ✅ after the guard, narrow to concrete values
     const userId = String(user.id);
     const role = user.role ?? "buyer";
 
     if (role !== "buyer" && role !== "admin" && role !== "seller") {
-        backTo(productId, "Account not allowed to purchase.");
+        backTo(slug, "Account not allowed to purchase.");
     }
 
     await sql/*sql*/`
@@ -46,7 +47,7 @@ export async function buyProduct(productId: string) {
       )
       SELECT EXISTS(SELECT 1 FROM upd) AS ok
     `;
-        if (!ok) backTo(productId, "Sold out or unavailable.");
+        if (!ok) backTo(slug, "Sold out or unavailable.");
 
         await trx/*sql*/`
       INSERT INTO purchases (user_id, product_id)
@@ -55,35 +56,36 @@ export async function buyProduct(productId: string) {
     `;
     });
 
-    backTo(productId, "Thanks for your purchase!");
+    backTo(slug, "Thanks for your purchase!");
 }
 
 export async function addReview(formData: FormData) {
-    const productId = String(formData.get("productId") || "");
-    const rating = Number(formData.get("rating") || 0);
-    const title = String(formData.get("title") || "");
-    const body = String(formData.get("body") || "");
+  const productId = String(formData.get("productId") || "");
+  const productSlug = String(formData.get("productSlug") || "");
+  const rating = Number(formData.get("rating") || 0);
+  const title = String(formData.get("title") || "");
+  const body = String(formData.get("body") || "");
 
-    const session = await getServerSession(authOptions);
-    const user = session?.user as { id?: string; role?: string } | undefined;
-    if (!user?.id) backTo(productId, "Please sign in to review.");
+  const session = await getServerSession(authOptions);
+  const user = session?.user as { id?: string; role?: string } | undefined;
+  if (!user?.id) backTo(productSlug, "Please sign in to review.");
 
-    const userId = String(user.id);
+  const userId = String(user.id);
 
-    const [{ exists }] = await sql<{ exists: boolean }[]>/*sql*/`
+  const [{ exists }] = await sql<{ exists: boolean }[]>/*sql*/`
     SELECT EXISTS(
       SELECT 1 FROM purchases WHERE user_id = ${userId} AND product_id = ${productId}
     ) AS exists
   `;
-    if (!exists) backTo(productId, "You can only review items you've purchased.");
-    if (!(rating >= 1 && rating <= 5)) backTo(productId, "Rating must be 1–5.");
+  if (!exists) backTo(productSlug, "You can only review items you've purchased.");
+  if (!(rating >= 1 && rating <= 5)) backTo(productSlug, "Rating must be 1–5.");
 
-    await sql.begin(async (trx) => {
-        await trx/*sql*/`
+  await sql.begin(async (trx) => {
+    await trx/*sql*/`
       INSERT INTO reviews (product_id, author_id, rating, title, body)
       VALUES (${productId}, ${userId}, ${rating}, ${title || null}, ${body || null})
     `;
-        await trx/*sql*/`
+    await trx/*sql*/`
       UPDATE products p
       SET rating_avg = sub.avg_rating,
           rating_count = sub.cnt
@@ -94,17 +96,17 @@ export async function addReview(formData: FormData) {
       ) sub
       WHERE p.id = sub.product_id
     `;
-    });
+  });
 
-    backTo(productId, "Review submitted!");
+  backTo(productSlug, "Review submitted!");
 }
 
 
 // src/app/lib/actions-store.ts
-export async function undoPurchase(productId: string) {
+export async function undoPurchase(productId: string, slug: string) {
     const session = await getServerSession(authOptions);
     const user = session?.user as { id?: string; role?: string } | undefined;
-    if (!user?.id) backTo(productId, "Please sign in.");
+    if (!user?.id) backTo(slug, "Please sign in.");
 
     const userId = String(user.id);
     const role = user.role ?? "buyer";
@@ -139,6 +141,6 @@ export async function undoPurchase(productId: string) {
         return "No purchase found to undo.";
     });
 
-    backTo(productId, msg); // redirect AFTER commit
+    backTo(slug, msg); // redirect AFTER commit
 }
 

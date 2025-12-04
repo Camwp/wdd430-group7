@@ -98,12 +98,13 @@ export default async function ProductPage({ params, searchParams }: Params) {
           <div className="mt-6 flex flex-wrap items-center gap-3">
             {product.stock > 0 ? (
               user?.id ? (
-                <form
-                  action={async () => {
-                    "use server";
-                    await buyProduct(product.id);
-                  }}
-                >
+                  <form
+                    action={async () => {
+                      "use server";
+                      await buyProduct(product.id, slug);
+                    }}
+                  >
+
                   <button
                     className="bg-emerald-600 text-white px-5 py-2 rounded-md"
                     disabled={!canBuy}
@@ -129,12 +130,13 @@ export default async function ProductPage({ params, searchParams }: Params) {
             )}
 
             {purchased && (
-              <form
-                action={async () => {
-                  "use server";
-                  await undoPurchase(product.id);
-                }}
-              >
+                <form
+                  action={async () => {
+                    "use server";
+                    await undoPurchase(product.id, slug);
+                  }}
+                >
+
                 <button className="border border-red-300 text-red-700 px-4 py-2 rounded-md">
                   Undo purchase (dev)
                 </button>
@@ -167,6 +169,7 @@ export default async function ProductPage({ params, searchParams }: Params) {
         {canReview ? (
           <form action={addReview} className="mt-4 space-y-3 border p-4 rounded-lg">
             <input type="hidden" name="productId" value={product.id} />
+            <input type="hidden" name="productSlug" value={slug} />
 
             <div>
               <label className="block text-sm font-medium">Rating</label>
