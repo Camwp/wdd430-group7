@@ -14,7 +14,7 @@ export default async function ArtisanStrip() {
                 {artisans.map((a) => (
                     <a
                         key={a.shop_id}
-                        href={`/seller/${a.shop_id}`} // use the shop id; swap to slug later if you add one
+                        href={`/seller/${a.slug}`} // use the shop id; swap to slug later if you add one
                         className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-white p-3 hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     >
                         {/* eslint-disable-next-line @next/next/no-img-element */}

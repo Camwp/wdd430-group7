@@ -5,6 +5,7 @@ import { sql } from '@/app/lib/db';
 // ----- Types for query rows -----
 type ArtisanRow = {
   shop_id: string;
+  slug: string;
   display_name: string;
   avatar_url: string | null;
   craft: string | null;
@@ -33,6 +34,7 @@ export async function getTopArtisans(limit = 4) {
   const rows = await sql<ArtisanRow[]>/*sql*/`
     WITH shop_stats AS (
       SELECT s.id AS shop_id,
+            s.slug,  
              s.display_name,
              s.avatar_url,
              COUNT(p.id) AS product_count
@@ -54,6 +56,7 @@ export async function getTopArtisans(limit = 4) {
       GROUP BY p.shop_id, c.name
     )
     SELECT st.shop_id,
+             st.slug,  
            st.display_name,
            COALESCE(st.avatar_url, '') AS avatar_url,
            COALESCE(cg.craft, 'Maker') AS craft
@@ -64,12 +67,13 @@ export async function getTopArtisans(limit = 4) {
     LIMIT ${limit};
   `;
 
-  return rows.map(r => ({
-    shop_id: r.shop_id,
-    display_name: r.display_name,
-    avatar_url: r.avatar_url ?? '',
-    craft: r.craft ?? 'Maker',
-  }));
+return rows.map(r => ({
+  shop_id: r.shop_id,
+  slug: r.slug,
+  display_name: r.display_name,
+  avatar_url: r.avatar_url ?? '',
+  craft: r.craft ?? 'Maker',
+}));
 }
 
 export async function getTopCategories(limit = 12) {

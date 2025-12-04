@@ -12,6 +12,7 @@ type PurchaseRow = {
   quantity: number;
   product_title: string;
   product_id: string;
+  product_slug: string;
 };
 
 async function getUserPurchases(userId: string): Promise<PurchaseRow[]> {
@@ -20,9 +21,10 @@ async function getUserPurchases(userId: string): Promise<PurchaseRow[]> {
       p.id,
       p.created_at,
       pr.price_cents,
-      1::int AS quantity,              -- no quantity in purchases, assume 1
-      pr.title       AS product_title,
-      pr.id          AS product_id
+      1::int AS quantity,
+      pr.title AS product_title,
+      pr.id AS product_id,
+      pr.slug AS product_slug
     FROM purchases p
     JOIN products pr ON pr.id = p.product_id
     WHERE p.user_id = ${userId}
@@ -99,12 +101,13 @@ export default async function AccountPurchasesPage() {
                 </p>
 
                 <div className="mt-2">
-                  <Link
-                    href={`/product/${order.product_id}`}
-                    className="text-sm text-blue-600 hover:underline"
-                  >
-                    View product
-                  </Link>
+                <Link
+                  href={`/product/${order.product_slug}`}
+                  className="text-sm text-blue-600 hover:underline"
+                >
+                  View product
+                </Link>
+
                   
                 </div>
               </article>
